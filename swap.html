@@ -1,45 +1,878 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Swap SA Points</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupremeAmer Token Mining</title>
+    <!-- Wallet Connection Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.4.0/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <!-- UI Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4e54c8;
+            --secondary: #8f94fb;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --dark: #343a40;
+            --light: #f8f9fa;
+            --sky-blue: #87CEEB;
+            --mining-speed: 2s;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--sky-blue), #a8e6ff);
+            color: var(--dark);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        
+        .logo-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .logo-img {
+            height: 60px;
+            width: auto;
+        }
+        
+        .logo-text {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 2.5rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Mining Animation */
+        .mining-animation {
+            height: 180px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            margin: 25px 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .mining-rig {
+            display: flex;
+            justify-content: space-around;
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+        }
+        
+        .miner {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(145deg, #343a40, #4a525a);
+            border-radius: 8px;
+            position: relative;
+            animation: mining var(--mining-speed) infinite ease-in-out;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .miner::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 10px;
+            background: #212529;
+            bottom: -10px;
+            transform: rotateX(90deg);
+            transform-origin: top;
+        }
+        
+        @keyframes mining {
+            0%, 100% { transform: translateY(0) rotateX(0); }
+            50% { transform: translateY(-25px) rotateX(30deg); }
+        }
+        
+        .sat {
+            position: absolute;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 14px;
+            animation: falling linear infinite;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes falling {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(180px) rotate(360deg); opacity: 0; }
+        }
+        
+        /* Wallet Connection */
+        .wallet-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .wallet-btn {
+            background: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+        
+        .wallet-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .wallet-btn img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+        
+        /* WalletConnect QR Modal */
+        .wallet-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .wallet-modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .wallet-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.8);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        /* Buttons */
+        .btn-custom {
+            border: none;
+            border-radius: 50px;
+            padding: 14px 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 1rem;
+            margin: 8px 0;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn-custom:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #5cb85c);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #f0ad4e);
+            color: black;
+        }
+        
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: white;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            padding: 12px 0;
+            z-index: 100;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: space-around;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .footer-btn {
+            background: none;
+            border: none;
+            color: var(--dark);
+            font-size: 1.5rem;
+            padding: 5px 25px;
+            border-radius: 50px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .footer-btn.active {
+            color: var(--primary);
+            transform: scale(1.1);
+        }
+        
+        .footer-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: var(--primary);
+            border-radius: 50%;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .wallet-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .logo-text {
+                font-size: 2rem;
+            }
+            
+            .logo-img {
+                height: 50px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-custom {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </head>
-<body class="font-sans bg-gray-100 text-gray-800">
-  <div class="container mx-auto p-4 text-center">
-    <h1 class="text-3xl font-bold mb-6">Swap SA Points to SACOIN</h1>
-    <p>8% Swap Fee</p>
-    <div class="mt-4">
-      <input 
-        type="number" 
-        id="swap-amount" 
-        placeholder="Enter SA Points to Swap (Min: 10,000)" 
-        class="border rounded w-1/2 p-2 text-center"
-      >
-      <button 
-        id="swap-button" 
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
-        Swap Now
-      </button>
-      <p id="swap-message" class="text-green-500 font-medium mt-4"></p>
+<body>
+    <div class="container">
+        <header class="logo-header">
+            <img src="logo.png" alt="SupremeAmer Logo" class="logo-img">
+            <h1 class="logo-text">SupremeAmer</h1>
+        </header>
+
+        <!-- Wallet Connection Section -->
+        <div class="card shadow-sm" id="walletSection">
+            <div class="card-body">
+                <h4 class="text-center mb-4"><i class="fas fa-wallet"></i> Connect Wallet</h4>
+                <div class="wallet-options">
+                    <button class="wallet-btn" onclick="connectWallet('injected')">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask">
+                        Browser Extension
+                    </button>
+                    <button class="wallet-btn" onclick="connectWallet('walletconnect')">
+                        <img src="https://walletconnect.com/walletconnect-logo.png" alt="WalletConnect">
+                        Mobile Wallet
+                    </button>
+                    <button class="wallet-btn" onclick="connectWallet('trust')">
+                        <img src="https://trustwallet.com/assets/images/media/assets/TWT.png" alt="Trust Wallet">
+                        Trust Wallet
+                    </button>
+                    <button class="wallet-btn" onclick="connectWallet('binance')">
+                        <img src="https://bin.bnbstatic.com/static/images/common/favicon.ico" alt="Binance Chain">
+                        Binance Chain
+                    </button>
+                </div>
+                <div id="walletAddress" class="text-center mt-3" style="word-break: break-all; font-family: monospace;"></div>
+            </div>
+        </div>
+
+        <!-- Mining Dashboard (Initially Hidden) -->
+        <div id="miningDashboard" style="display: none;">
+            <div class="card shadow-sm mt-4">
+                <div class="card-body text-center">
+                    <h4><i class="fas fa-hard-hat"></i> Mining Dashboard</h4>
+                    <div class="mining-animation" id="miningAnimation">
+                        <div class="mining-rig">
+                            <div class="miner"></div>
+                            <div class="miner"></div>
+                            <div class="miner"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-label">Mined SAT</span>
+                            <span id="minedAmount" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Mining Speed</span>
+                            <span id="miningSpeed" class="stat-value">0.08/hr</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Current Tier</span>
+                            <span id="miningTier" class="stat-value">Basic</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Referrals</span>
+                            <span id="referralCount" class="stat-value">0/3</span>
+                        </div>
+                    </div>
+                    
+                    <button id="startMining" class="btn-custom btn-success">
+                        <i class="fas fa-play"></i> Start Mining
+                    </button>
+                    <button id="claimBtn" class="btn-custom btn-primary mt-2">
+                        <i class="fas fa-coins"></i> Claim Rewards
+                    </button>
+                    <button id="upgradeBtn" class="btn-custom btn-warning mt-2">
+                        <i class="fas fa-bolt"></i> Upgrade Tier
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Earnings Chart -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h5><i class="fas fa-chart-line"></i> Earnings History</h5>
+                    <canvas id="earningsChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telegram Auth Section -->
+        <div class="card shadow-sm mt-4" id="telegramAuth">
+            <div class="card-body text-center">
+                <h4><i class="fab fa-telegram"></i> Telegram Login</h4>
+                <p class="mb-3">Connect your Telegram account to track your mining progress</p>
+                <script async src="https://telegram.org/js/telegram-widget.js?19" 
+                        data-telegram-login="YourBotName" 
+                        data-auth-url="/auth" 
+                        data-request-access="write"></script>
+            </div>
+        </div>
     </div>
-  </div>
-  <script>
-    document.getElementById('swap-button').addEventListener('click', async () => {
-      const swapAmount = parseFloat(document.getElementById('swap-amount').value);
-      if (swapAmount < 10000) {
-        alert('Minimum swap amount is 10,000 SA Points.');
-        return;
-      }
 
-      const fee = swapAmount * 0.08;
-      const sacoin = swapAmount - fee;
+    <!-- App Footer -->
+    <footer class="footer">
+        <div class="footer-nav">
+            <button class="footer-btn active" data-page="home">
+                <i class="fas fa-home"></i>
+            </button>
+            <button class="footer-btn" data-page="dapp">
+                <i class="fas fa-rocket"></i>
+            </button>
+            <button class="footer-btn" data-page="settings">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </footer>
 
-      // Simulate Backend Update
-      document.getElementById('swap-message').textContent = 
-        `Swapped ${swapAmount} SA Points for ${sacoin.toFixed(2)} SACOIN (Fee: ${fee.toFixed(2)})`;
-    });
-  </script>
+    <!-- WalletConnect QR Modal -->
+    <div id="walletConnectModal" class="wallet-modal" style="display: none;">
+        <div class="wallet-modal-content">
+            <button class="wallet-modal-close" onclick="closeModal()">&times;</button>
+            <h4>Scan with WalletConnect</h4>
+            <div id="walletConnectQr" class="my-4"></div>
+            <p>Or open in your mobile wallet</p>
+            <button class="btn-custom btn-primary" id="wcDeepLink">Open Wallet</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - Replace with your actual contract details
+        const CONFIG = {
+            CONTRACT_ADDRESS: "0xYourContractAddress",
+            CONTRACT_ABI: [/* Your Contract ABI */],
+            BSC_RPC_URL: "https://bsc-testnet.infura.io/v3/d51a2c96b18044878b5f6336495bf341",
+            WALLETCONNECT_PROJECT_ID: "YOUR_WALLETCONNECT_PROJECT_ID",
+            TELEGRAM_BOT: "YourBotName",
+            MINING_TIERS: {
+                basic: { speed: 0.08, price: 0 },
+                advanced: { speed: 0.12, price: 2 },
+                pro: { speed: 0.20, price: 5 },
+                enterprise: { speed: 0.35, price: 10 }
+            }
+        };
+
+        // Application State
+        const state = {
+            web3: null,
+            provider: null,
+            contract: null,
+            account: null,
+            miningInterval: null,
+            mined: 0,
+            speed: 0.08,
+            tier: 'basic',
+            referrals: 0,
+            isMining: false,
+            user: null,
+            chart: null,
+            walletConnectProvider: null
+        };
+
+        // DOM Elements
+        const elements = {
+            walletSection: document.getElementById('walletSection'),
+            miningDashboard: document.getElementById('miningDashboard'),
+            telegramAuth: document.getElementById('telegramAuth'),
+            walletAddress: document.getElementById('walletAddress'),
+            minedAmount: document.getElementById('minedAmount'),
+            miningSpeed: document.getElementById('miningSpeed'),
+            miningTier: document.getElementById('miningTier'),
+            referralCount: document.getElementById('referralCount'),
+            startMining: document.getElementById('startMining'),
+            claimBtn: document.getElementById('claimBtn'),
+            upgradeBtn: document.getElementById('upgradeBtn'),
+            miningAnimation: document.getElementById('miningAnimation'),
+            earningsChart: document.getElementById('earningsChart'),
+            walletConnectModal: document.getElementById('walletConnectModal'),
+            walletConnectQr: document.getElementById('walletConnectQr'),
+            wcDeepLink: document.getElementById('wcDeepLink')
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupEventListeners();
+            checkPreviousSession();
+        });
+
+        function setupEventListeners() {
+            // Wallet connection
+            document.querySelectorAll('.wallet-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.target.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Connecting...';
+                });
+            });
+            
+            // Mining controls
+            elements.startMining.addEventListener('click', toggleMining);
+            elements.claimBtn.addEventListener('click', claimRewards);
+            elements.upgradeBtn.addEventListener('click', showUpgradeOptions);
+            
+            // Footer navigation
+            document.querySelectorAll('.footer-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.footer-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    // Navigation logic would go here
+                });
+            });
+        }
+
+        async function checkPreviousSession() {
+            const savedWallet = localStorage.getItem('supremeamer_connectedWallet');
+            if (savedWallet) {
+                await connectWallet(savedWallet);
+            }
+        }
+
+        // Wallet Connection Handler
+        async function connectWallet(type) {
+            try {
+                let provider;
+                
+                switch(type) {
+                    case 'injected':
+                        if (!window.ethereum) throw new Error('No Ethereum provider found');
+                        provider = window.ethereum;
+                        await provider.request({ method: 'eth_requestAccounts' });
+                        break;
+                        
+                    case 'walletconnect':
+                        // Initialize WalletConnect v2
+                        state.walletConnectProvider = await EthereumProvider.init({
+                            projectId: CONFIG.WALLETCONNECT_PROJECT_ID,
+                            chains: [56], // BSC chain ID
+                            showQrModal: false // We'll handle the QR display ourselves
+                        });
+                        
+                        // Set up QR code display
+                        state.walletConnectProvider.on('display_uri', (uri) => {
+                            showWalletConnectModal(uri);
+                        });
+                        
+                        await state.walletConnectProvider.connect();
+                        provider = state.walletConnectProvider;
+                        break;
+                        
+                    case 'trust':
+                        if (!window.ethereum || !window.ethereum.isTrust) {
+                            // Fallback to WalletConnect for Trust Wallet
+                            return connectWallet('walletconnect');
+                        }
+                        provider = window.ethereum;
+                        await provider.request({ method: 'eth_requestAccounts' });
+                        break;
+                        
+                    case 'binance':
+                        if (!window.BinanceChain) {
+                            // Fallback to WalletConnect for Binance Chain Wallet
+                            return connectWallet('walletconnect');
+                        }
+                        provider = window.BinanceChain;
+                        await provider.request({ method: 'bnb_accounts' });
+                        break;
+                        
+                    default:
+                        throw new Error('Unknown wallet type');
+                }
+                
+                state.provider = provider;
+                state.web3 = new Web3(provider);
+                state.account = (await state.web3.eth.getAccounts())[0];
+                
+                // Initialize contract
+                state.contract = new state.web3.eth.Contract(
+                    CONFIG.CONTRACT_ABI,
+                    CONFIG.CONTRACT_ADDRESS
+                );
+                
+                // Update UI
+                elements.walletAddress.textContent = state.account;
+                elements.miningDashboard.style.display = 'block';
+                localStorage.setItem('supremeamer_connectedWallet', type);
+                
+                // Start mining stats updates
+                updateMiningStats();
+                initCharts();
+                
+                // Handle account changes
+                if (provider.on) {
+                    provider.on('accountsChanged', handleAccountsChanged);
+                    provider.on('chainChanged', handleChainChanged);
+                }
+                
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                showError(`Connection failed: ${error.message}`);
+            } finally {
+                document.querySelectorAll('.wallet-btn').forEach(btn => {
+                    btn.innerHTML = btn.innerHTML.replace('<span class="spinner-border spinner-border-sm" role="status"></span> ', '');
+                });
+            }
+        }
+
+        function showWalletConnectModal(uri) {
+            // Generate QR code
+            new QRCode(elements.walletConnectQr, {
+                text: uri,
+                width: 250,
+                height: 250,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Set up deep link
+            elements.wcDeepLink.onclick = () => {
+                window.location.href = uri;
+            };
+            
+            // Show modal
+            elements.walletConnectModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            elements.walletConnectModal.style.display = 'none';
+            // Clear QR code
+            elements.walletConnectQr.innerHTML = '';
+        }
+
+        function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                // Wallet disconnected
+                showError('Wallet disconnected');
+                resetApp();
+            } else {
+                // Account changed
+                state.account = accounts[0];
+                elements.walletAddress.textContent = state.account;
+                updateMiningStats();
+            }
+        }
+
+        function handleChainChanged(chainId) {
+            // Reload when network changes
+            window.location.reload();
+        }
+
+        function resetApp() {
+            state.web3 = null;
+            state.account = null;
+            state.isMining = false;
+            
+            if (state.miningInterval) {
+                clearInterval(state.miningInterval);
+            }
+            
+            elements.miningDashboard.style.display = 'none';
+            elements.walletAddress.textContent = '';
+            localStorage.removeItem('supremeamer_connectedWallet');
+        }
+
+        // Mining Functions
+        async function updateMiningStats() {
+            try {
+                // Get stats from contract
+                const stats = await state.contract.methods
+                    .getUserMiningStats(state.account)
+                    .call();
+                
+                state.mined = state.web3.utils.fromWei(stats.minedAmount, 'ether');
+                state.speed = state.web3.utils.fromWei(stats.miningSpeed, 'ether');
+                state.tier = stats.currentTier;
+                state.referrals = stats.referralCount;
+                
+                // Update UI
+                updateUI();
+                
+            } catch (error) {
+                console.error("Error fetching mining stats:", error);
+            }
+            
+            // Update every 15 seconds
+            setTimeout(updateMiningStats, 15000);
+        }
+
+        function updateUI() {
+            elements.minedAmount.textContent = parseFloat(state.mined).toFixed(4);
+            elements.miningSpeed.textContent = `${state.speed}/hr`;
+            elements.miningTier.textContent = state.tier.charAt(0).toUpperCase() + state.tier.slice(1);
+            elements.referralCount.textContent = `${state.referrals}/3`;
+            
+            // Update mining animation speed
+            document.documentElement.style.setProperty(
+                '--mining-speed',
+                `${state.tier === 'basic' ? 2 : state.tier === 'advanced' ? 1.5 : 1}s`
+            );
+            
+            // Update button states
+            elements.startMining.innerHTML = state.isMining 
+                ? '<i class="fas fa-stop"></i> Stop Mining' 
+                : '<i class="fas fa-play"></i> Start Mining';
+                
+            elements.claimBtn.disabled = parseFloat(state.mined) <= 0;
+            
+            // Update chart
+            if (state.chart) {
+                updateChart();
+            }
+        }
+
+        function toggleMining() {
+            state.isMining = !state.isMining;
+            
+            if (state.isMining) {
+                startMiningAnimation();
+                showNotification('Mining started successfully!');
+            } else {
+                stopMiningAnimation();
+                showNotification('Mining stopped');
+            }
+            
+            updateUI();
+        }
+
+        function startMiningAnimation() {
+            // Clear existing animation
+            elements.miningAnimation.querySelectorAll('.sat').forEach(el => el.remove());
+            
+            // Create falling SAT elements
+            for (let i = 0; i < 8; i++) {
+                const sat = document.createElement('div');
+                sat.className = 'sat';
+                sat.textContent = 'SAT';
+                sat.style.left = `${5 + (i * 12)}%`;
+                sat.style.animationDuration = `${state.tier === 'basic' ? 3 : state.tier === 'advanced' ? 2.5 : 2}s`;
+                sat.style.animationDelay = `${i * 0.3}s`;
+                elements.miningAnimation.appendChild(sat);
+            }
+        }
+
+        function stopMiningAnimation() {
+            elements.miningAnimation.querySelectorAll('.sat').forEach(el => el.remove());
+        }
+
+        async function claimRewards() {
+            try {
+                elements.claimBtn.disabled = true;
+                elements.claimBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Processing...';
+                
+                const tx = await state.contract.methods
+                    .claimMiningRewards()
+                    .send({ from: state.account });
+                
+                showNotification(`Successfully claimed ${state.mined} SAT!`);
+                updateMiningStats();
+                
+            } catch (error) {
+                console.error("Claim failed:", error);
+                showNotification(`Claim failed: ${error.message}`, 'error');
+            } finally {
+                elements.claimBtn.innerHTML = '<i class="fas fa-coins"></i> Claim Rewards';
+                elements.claimBtn.disabled = parseFloat(state.mined) <= 0;
+            }
+        }
+
+        function showUpgradeOptions() {
+            // This would show a modal with tier options
+            alert('Upgrade functionality would connect to your contract');
+            // In production, implement tier upgrade logic here
+        }
+
+        // Charts
+        function initCharts() {
+            state.chart = new Chart(elements.earningsChart, {
+                type: 'line',
+                data: {
+                    labels: Array(7).fill('').map((_, i) => `Day ${i + 1}`),
+                    datasets: [{
+                        label: 'SAT Mined',
+                        data: Array(7).fill(0).map(() => Math.random() * 100),
+                        borderColor: 'var(--primary)',
+                        backgroundColor: 'rgba(78, 84, 200, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            // Shift existing data left and add new value
+            const data = state.chart.data.datasets[0].data;
+            data.shift();
+            data.push(parseFloat(state.mined));
+            
+            state.chart.update();
+        }
+
+        // Telegram Auth Handler
+        window.onTelegramAuth = (user) => {
+            state.user = user;
+            elements.telegramAuth.style.display = 'none';
+            
+            // In production, verify with your backend
+            console.log("Authenticated user:", user);
+            showNotification(`Welcome, ${user.first_name}!`);
+            
+            // Update UI with user info
+            if (state.account) {
+                // User has both wallet and Telegram connected
+                showNotification('Account setup complete!');
+            }
+        };
+
+        // Notification System
+        function showNotification(message, type = 'success') {
+            // This would show a nice notification toast
+            console.log(`${type}: ${message}`);
+            alert(message);
+        }
+
+        // Error handling
+        function showError(message) {
+            // This would show a nice error modal
+            console.error(message);
+            alert(message);
+        }
+
+        // QR Code Library (for WalletConnect)
+        document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"><\/script>');
+    </script>
 </body>
 </html>
