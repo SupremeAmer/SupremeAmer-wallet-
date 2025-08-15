@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                  script-src 'self' https://telegram.org https://cdn.jsdelivr.net; 
+                  style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; 
+                  img-src 'self' data: https://* blob:;">
     <title>SupremeAmer Token Mining</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
+    <link rel="manifest" href="/manifest.json">
     <style>
         :root {
             --primary: #4e54c8;
@@ -14,6 +23,8 @@
             --info: #17a2b8;
             --dark: #343a40;
             --light: #f8f9fa;
+            --pro: #9c27b0;
+            --enterprise: #ff5722;
         }
         
         * {
@@ -30,7 +41,7 @@
         }
         
         .container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -38,9 +49,18 @@
         header {
             text-align: center;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
         }
         
-        .logo {
+        .logo-img {
+            height: 60px;
+            width: auto;
+        }
+        
+        .logo-text {
             color: var(--primary);
             font-weight: 700;
             font-size: 2.5rem;
@@ -55,47 +75,66 @@
         .card {
             background: white;
             border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
             overflow: hidden;
+            border: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
         }
         
         .card-body {
-            padding: 20px;
+            padding: 25px;
         }
         
         .mining-animation {
-            height: 120px;
+            height: 150px;
             margin: 20px auto;
             position: relative;
             overflow: hidden;
-            border-radius: 10px;
-            background-color: #e9ecef;
+            border-radius: 15px;
+            background: linear-gradient(145deg, #e9ecef, #ffffff);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
         }
         
-        .mining-rig {
+        .mining-rig-3d {
             display: flex;
             justify-content: space-around;
             position: absolute;
-            bottom: 10px;
+            bottom: 20px;
             width: 100%;
+            perspective: 1000px;
         }
         
-        .miner {
-            width: 40px;
-            height: 40px;
-            background-color: var(--dark);
-            border-radius: 5px;
+        .miner-3d {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(145deg, #343a40, #4a525a);
+            border-radius: 8px;
             position: relative;
-            animation: mining 2s infinite ease-in-out;
+            transform-style: preserve-3d;
+            animation: mining-3d 3s infinite ease-in-out;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         
-        .miner:nth-child(2) { animation-delay: 0.3s; }
-        .miner:nth-child(3) { animation-delay: 0.6s; }
+        .miner-3d::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 10px;
+            background: #212529;
+            bottom: -10px;
+            transform: rotateX(90deg);
+            transform-origin: top;
+        }
         
-        @keyframes mining {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        @keyframes mining-3d {
+            0%, 100% { transform: translateY(0) rotateX(0); }
+            50% { transform: translateY(-25px) rotateX(30deg); }
         }
         
         .satoshis-falling {
@@ -114,6 +153,8 @@
             animation: falling 3s linear infinite;
             color: var(--primary);
             font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.2);
         }
         
         .satoshis-falling::after {
@@ -121,40 +162,45 @@
             position: absolute;
             top: -20px;
             left: 30%;
-            animation: falling 3.5s linear infinite 1s;
+            animation: falling 3.5s linear infinite 0.5s;
             color: var(--primary);
             font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.2);
         }
         
         @keyframes falling {
             0% { transform: translateY(0) rotate(0deg); opacity: 0; }
             10% { opacity: 1; }
             90% { opacity: 1; }
-            100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
+            100% { transform: translateY(150px) rotate(360deg); opacity: 0; }
         }
         
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            background-color: var(--light);
-            padding: 15px;
-            border-radius: 10px;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
             margin-bottom: 20px;
         }
         
-        .stat-item {
+        .stat-card {
+            background: var(--light);
+            border-radius: 10px;
+            padding: 15px;
             text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .stat-label {
             display: block;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--dark);
+            margin-bottom: 5px;
         }
         
         .stat-value {
             display: block;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: bold;
             color: var(--primary);
         }
@@ -169,7 +215,38 @@
             transition: all 0.3s ease;
             text-align: center;
             font-size: 1rem;
-            margin: 5px;
+            margin: 5px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .btn:active::after {
+            animation: ripple 0.6s ease-out;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(20, 20);
+                opacity: 0;
+            }
         }
         
         .btn-block {
@@ -178,33 +255,54 @@
         }
         
         .btn-primary {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
         }
         
         .btn-success {
-            background: linear-gradient(to right, var(--success), #5cb85c);
+            background: linear-gradient(135deg, var(--success), #5cb85c);
             color: white;
         }
         
         .btn-danger {
-            background: linear-gradient(to right, var(--danger), #d9534f);
+            background: linear-gradient(135deg, var(--danger), #d9534f);
             color: white;
         }
         
         .btn-warning {
-            background: linear-gradient(to right, var(--warning), #f0ad4e);
+            background: linear-gradient(135deg, var(--warning), #f0ad4e);
             color: black;
         }
         
         .btn-info {
-            background: linear-gradient(to right, var(--info), #5bc0de);
+            background: linear-gradient(135deg, var(--info), #5bc0de);
+            color: white;
+        }
+        
+        .btn-pro {
+            background: linear-gradient(135deg, var(--pro), #ba68c8);
+            color: white;
+        }
+        
+        .btn-enterprise {
+            background: linear-gradient(135deg, var(--enterprise), #ff8a65);
             color: white;
         }
         
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .btn-group .btn {
+            flex: 1;
         }
         
         .input-group {
@@ -214,15 +312,22 @@
         
         .form-control {
             flex: 1;
-            padding: 10px 15px;
+            padding: 12px 15px;
             border: 1px solid #ddd;
             border-radius: 50px 0 0 50px;
             font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary);
         }
         
         .input-group-append .btn {
             border-radius: 0 50px 50px 0;
             margin-left: -1px;
+            z-index: 1;
         }
         
         .footer {
@@ -230,14 +335,15 @@
             bottom: 0;
             width: 100%;
             background-color: white;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
             padding: 10px 0;
+            z-index: 100;
         }
         
         .footer-nav {
             display: flex;
             justify-content: space-around;
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
         }
         
@@ -250,6 +356,7 @@
             border-radius: 50px;
             transition: all 0.3s ease;
             cursor: pointer;
+            position: relative;
         }
         
         .footer-btn.active {
@@ -257,24 +364,41 @@
             transform: scale(1.1);
         }
         
+        .footer-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            height: 5px;
+            background: var(--primary);
+            border-radius: 50%;
+        }
+        
         .user-details {
             display: flex;
             align-items: center;
-            margin-top: 10px;
+            margin-top: 15px;
+            gap: 15px;
         }
         
         .user-photo {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            border: 2px solid var(--primary);
-            margin-right: 10px;
+            border: 3px solid var(--primary);
+            object-fit: cover;
         }
         
         .wallet-address {
             font-family: monospace;
             font-size: 0.9rem;
             word-break: break-all;
+            background: var(--light);
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-top: 5px;
         }
         
         .hidden {
@@ -287,18 +411,253 @@
         
         .mt-3 { margin-top: 15px; }
         .mb-3 { margin-bottom: 15px; }
+        .my-3 { margin: 15px 0; }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            padding: 25px;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--dark);
+        }
+        
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .tier-card {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .tier-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .tier-card.selected {
+            border-color: var(--primary);
+            background: rgba(78, 84, 200, 0.05);
+        }
+        
+        .tier-name {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .tier-speed {
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .tier-price {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .logo-text {
+                font-size: 2rem;
+            }
+            
+            .logo-img {
+                height: 50px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .mining-animation {
+                height: 120px;
+            }
+            
+            .miner-3d {
+                width: 40px;
+                height: 40px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .logo-text {
+                font-size: 1.8rem;
+            }
+            
+            .logo-img {
+                height: 40px;
+            }
+        }
+        
+        /* Animation for notification */
+        @keyframes slideIn {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            display: none;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Badge for notifications */
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
+    <!-- Notification System -->
+    <div id="notification" class="notification"></div>
+    
+    <!-- Modal System -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Modal Title</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                Modal content goes here
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary">Cancel</button>
+                <button class="btn btn-primary">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
-            <h1 class="logo">SupremeAmer</h1>
-            <p class="tagline">Token Mining Platform</p>
+            <img src="logo.png" alt="SupremeAmer Logo" class="logo-img">
+            <div>
+                <h1 class="logo-text">SupremeAmer</h1>
+                <p class="tagline">Advanced Token Mining Platform</p>
+            </div>
         </header>
 
         <div class="wallet-connect card">
             <div class="card-body">
-                <button id="connectWallet" class="btn btn-primary btn-block">Connect Wallet</button>
+                <button id="connectWallet" class="btn btn-primary btn-block">
+                    <i class="fas fa-wallet"></i> Connect Wallet
+                </button>
                 <div id="walletAddress" class="mt-3 wallet-address hidden"></div>
             </div>
         </div>
@@ -306,62 +665,80 @@
         <div class="mining-card card">
             <div class="card-body text-center">
                 <div class="mining-animation">
-                    <div class="mining-rig">
-                        <div class="miner"></div>
-                        <div class="miner"></div>
-                        <div class="miner"></div>
+                    <div class="mining-rig-3d">
+                        <div class="miner-3d"></div>
+                        <div class="miner-3d"></div>
+                        <div class="miner-3d"></div>
                     </div>
                     <div class="satoshis-falling"></div>
                 </div>
                 <h3>Mining SupremeAmer Tokens</h3>
                 
-                <div class="stats">
-                    <div class="stat-item">
+                <div class="stats-grid">
+                    <div class="stat-card">
                         <span class="stat-label">Mined SAT</span>
                         <span id="minedAmount" class="stat-value">0</span>
                     </div>
-                    <div class="stat-item">
+                    <div class="stat-card">
                         <span class="stat-label">Mining Speed</span>
                         <span id="miningSpeed" class="stat-value">0.08/hr</span>
                     </div>
-                    <div class="stat-item">
+                    <div class="stat-card">
                         <span class="stat-label">Referrals</span>
                         <span id="referralCount" class="stat-value">0/3</span>
                     </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Tier</span>
+                        <span id="miningTier" class="stat-value">Basic</span>
+                    </div>
                 </div>
                 
-                <button id="startMining" class="btn btn-success btn-block">Start Mining</button>
-                <button id="upgradeMining" class="btn btn-warning btn-block">Upgrade Speed (2$ BNB)</button>
-                <button id="withdraw" class="btn btn-info btn-block mt-3" disabled>Withdraw (Min 10,000 SAT)</button>
+                <div class="btn-group">
+                    <button id="startMining" class="btn btn-success">
+                        <i class="fas fa-play"></i> Start Mining
+                    </button>
+                    <button id="upgradeBtn" class="btn btn-warning">
+                        <i class="fas fa-bolt"></i> Upgrade
+                    </button>
+                </div>
+                
+                <button id="withdraw" class="btn btn-info btn-block" disabled>
+                    <i class="fas fa-coins"></i> Withdraw (Min 10,000 SAT)
+                </button>
             </div>
         </div>
 
         <div class="referral-section card">
             <div class="card-body">
-                <h4>Referral Program</h4>
-                <p>Invite 3 friends to enable withdrawals</p>
+                <h4><i class="fas fa-users"></i> Referral Program</h4>
+                <p>Invite friends and earn 10% of their mining rewards</p>
                 <div class="input-group">
                     <input type="text" id="referralLink" class="form-control" readonly>
                     <div class="input-group-append">
-                        <button class="btn btn-outline-secondary" id="copyReferral">Copy</button>
+                        <button class="btn btn-outline-secondary" id="copyReferral">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
                     </div>
                 </div>
-                <div class="stats">
-                    <div class="stat-item">
+                <div class="stats-grid my-3">
+                    <div class="stat-card">
                         <span class="stat-label">Total Referrals</span>
                         <span id="totalReferrals" class="stat-value">0</span>
                     </div>
-                    <div class="stat-item">
+                    <div class="stat-card">
                         <span class="stat-label">Referral Earnings</span>
                         <span id="referralEarnings" class="stat-value">0 SAT</span>
                     </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="referralChart"></canvas>
                 </div>
             </div>
         </div>
 
         <div class="telegram-auth card" id="telegramAuth">
             <div class="card-body text-center">
-                <h4>Register with Telegram</h4>
+                <h4><i class="fab fa-telegram"></i> Register with Telegram</h4>
                 <p>Connect your Telegram account to start mining</p>
                 <script async src="https://telegram.org/js/telegram-widget.js?19" 
                         data-telegram-login="supremeamer_mining_bot" 
@@ -379,7 +756,17 @@
                     <div>
                         <div>Telegram ID: <span id="userId"></span></div>
                         <div>Mining since: <span id="joinDate"></span></div>
+                        <div>Account Tier: <span id="userTier">Basic</span></div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="earnings-card card hidden" id="earningsCard">
+            <div class="card-body">
+                <h4><i class="fas fa-chart-line"></i> Earnings Overview</h4>
+                <div class="chart-container">
+                    <canvas id="earningsChart"></canvas>
                 </div>
             </div>
         </div>
@@ -387,37 +774,45 @@
 
     <footer class="footer">
         <div class="footer-nav">
-            <button class="footer-btn active" onclick="window.location.href='index.html'">
+            <button class="footer-btn active" data-page="home">
                 <i class="fas fa-home"></i> Home
+                <span class="badge hidden" id="homeBadge"></span>
             </button>
-            <button class="footer-btn" onclick="window.location.href='dapp.html'">
+            <button class="footer-btn" data-page="dapp">
                 <i class="fas fa-rocket"></i> DAPP
+                <span class="badge hidden" id="dappBadge"></span>
             </button>
-            <button class="footer-btn" onclick="window.location.href='settings.html'">
+            <button class="footer-btn" data-page="settings">
                 <i class="fas fa-cog"></i> Settings
+                <span class="badge hidden" id="settingsBadge"></span>
             </button>
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
-        // Configuration
+        // Enhanced Configuration
         const config = {
-            miningSpeed: 0.08, // SAT per hour
-            upgradedSpeed: 0.12, // SAT per hour
-            upgradeCost: 2, // in USD worth of BNB
-            minWithdraw: 10000, // minimum SAT to withdraw
-            requiredReferrals: 3, // required referrals to withdraw
-            upgradeWallet: "0xYourWalletAddress", // Your wallet address for upgrade fees
-            contractAddress: "0xSupremeAmerContract", // SupremeAmer token contract
-            bnbRpcUrl: "https://bsc-dataseed.binance.org/", // BSC RPC URL
-            telegramBotName: "@Suprememer_bot" // Your Telegram bot username
+            miningTiers: {
+                basic: { speed: 0.08, price: 0, name: "Basic" },
+                advanced: { speed: 0.12, price: 2, name: "Advanced" },
+                pro: { speed: 0.20, price: 5, name: "Pro" },
+                enterprise: { speed: 0.35, price: 10, name: "Enterprise" }
+            },
+            minWithdraw: 10000,
+            requiredReferrals: 3,
+            upgradeWallet: "0xYourWalletAddress",
+            contractAddress: "0xSupremeAmerContract",
+            bnbRpcUrl: "https://bsc-dataseed.binance.org/",
+            telegramBotName: "supremeamer_mining_bot",
+            referralBonus: 0.10 // 10% of referred users' earnings
         };
 
-        // State
+        // Enhanced State Management
         let state = {
             mined: 0,
             mining: false,
-            upgraded: false,
+            tier: 'basic',
             referrals: 0,
             referralEarnings: 0,
             startTime: null,
@@ -425,7 +820,10 @@
             walletConnected: false,
             walletAddress: null,
             telegramUser: null,
-            miningInterval: null
+            miningInterval: null,
+            referralData: [],
+            earningsData: [],
+            charts: {}
         };
 
         // DOM Elements
@@ -433,8 +831,9 @@
             minedAmount: document.getElementById('minedAmount'),
             miningSpeed: document.getElementById('miningSpeed'),
             referralCount: document.getElementById('referralCount'),
+            miningTier: document.getElementById('miningTier'),
             startMining: document.getElementById('startMining'),
-            upgradeMining: document.getElementById('upgradeMining'),
+            upgradeBtn: document.getElementById('upgradeBtn'),
             withdraw: document.getElementById('withdraw'),
             referralLink: document.getElementById('referralLink'),
             copyReferral: document.getElementById('copyReferral'),
@@ -446,62 +845,229 @@
             userId: document.getElementById('userId'),
             userPhoto: document.getElementById('userPhoto'),
             joinDate: document.getElementById('joinDate'),
+            userTier: document.getElementById('userTier'),
             connectWallet: document.getElementById('connectWallet'),
-            walletAddress: document.getElementById('walletAddress')
+            walletAddress: document.getElementById('walletAddress'),
+            earningsCard: document.getElementById('earningsCard'),
+            notification: document.getElementById('notification'),
+            modal: document.getElementById('modal'),
+            modalTitle: document.querySelector('.modal-title'),
+            modalBody: document.querySelector('.modal-body'),
+            modalFooter: document.querySelector('.modal-footer')
         };
 
-        // Initialize
+        // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             loadState();
             setupEventListeners();
             updateUI();
             generateReferralLink();
+            checkReferral();
+            setupNavigation();
             
-            // Check if mining was active when page was closed
             if (state.mining) {
                 startMining();
             }
             
-            // Check for referral in URL
-            checkReferral();
+            // Initialize charts
+            initCharts();
+            
+            // Check if PWA is installed
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('Running as PWA');
+            }
+            
+            // Register service worker for PWA
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            }
         });
 
         function setupEventListeners() {
+            // Mining controls
             elements.startMining.addEventListener('click', toggleMining);
-            elements.upgradeMining.addEventListener('click', upgradeMining);
+            elements.upgradeBtn.addEventListener('click', showUpgradeOptions);
             elements.withdraw.addEventListener('click', withdrawFunds);
+            
+            // Referral system
             elements.copyReferral.addEventListener('click', copyReferralLink);
+            
+            // Wallet connection
             elements.connectWallet.addEventListener('click', connectWallet);
+            
+            // Modal system
+            document.querySelector('.modal-close').addEventListener('click', closeModal);
+            
+            // Handle clicks on modal footer buttons
+            elements.modalFooter.addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn')) {
+                    const action = e.target.dataset.action;
+                    if (action) {
+                        handleModalAction(action);
+                    }
+                    closeModal();
+                }
+            });
+            
+            // Handle window focus to update mining if tab was inactive
+            window.addEventListener('focus', function() {
+                if (state.mining) {
+                    calculateMined();
+                    updateUI();
+                }
+            });
+        }
+
+        function setupNavigation() {
+            document.querySelectorAll('.footer-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const page = this.dataset.page;
+                    navigateTo(page);
+                });
+            });
+        }
+
+        function navigateTo(page) {
+            // In a single-page app, this would change views without reload
+            // For this example, we'll just show/hide sections
+            document.querySelectorAll('.footer-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show notification badge for demonstration
+            if (page === 'dapp') {
+                showBadge('dappBadge', '3');
+            }
+        }
+
+        function showBadge(badgeId, content) {
+            const badge = document.getElementById(badgeId);
+            badge.textContent = content;
+            badge.classList.remove('hidden');
+        }
+
+        function initCharts() {
+            // Initialize referral chart
+            const referralCtx = document.getElementById('referralChart').getContext('2d');
+            state.charts.referral = new Chart(referralCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Referral Signups',
+                        data: [2, 5, 3, 7],
+                        backgroundColor: 'rgba(78, 84, 200, 0.7)',
+                        borderColor: 'rgba(78, 84, 200, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Initialize earnings chart
+            const earningsCtx = document.getElementById('earningsChart').getContext('2d');
+            state.charts.earnings = new Chart(earningsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'SAT Earned',
+                        data: [1200, 1900, 1700, 2500, 2200, 3000, 2800],
+                        fill: true,
+                        backgroundColor: 'rgba(78, 84, 200, 0.2)',
+                        borderColor: 'rgba(78, 84, 200, 1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            // Update charts with real data when available
+            if (state.charts.referral) {
+                state.charts.referral.data.datasets[0].data = [
+                    Math.floor(Math.random() * 10),
+                    Math.floor(Math.random() * 10),
+                    Math.floor(Math.random() * 10),
+                    Math.floor(Math.random() * 10)
+                ];
+                state.charts.referral.update();
+            }
+            
+            if (state.charts.earnings) {
+                state.charts.earnings.data.datasets[0].data = [
+                    Math.floor(Math.random() * 5000),
+                    Math.floor(Math.random() * 5000),
+                    Math.floor(Math.random() * 5000),
+                    Math.floor(Math.random() * 5000),
+                    Math.floor(Math.random() * 5000),
+                    Math.floor(Math.random() * 5000),
+                    Math.floor(Math.random() * 5000)
+                ];
+                state.charts.earnings.update();
+            }
         }
 
         function loadState() {
             const savedState = localStorage.getItem('supremeamerMiningState');
             if (savedState) {
-                state = JSON.parse(savedState);
-                // Convert string dates back to numbers
-                if (state.startTime) state.startTime = parseInt(state.startTime);
-                if (state.lastUpdate) state.lastUpdate = parseInt(state.lastUpdate);
+                try {
+                    const parsed = JSON.parse(savedState);
+                    // Convert string dates back to numbers
+                    if (parsed.startTime) parsed.startTime = parseInt(parsed.startTime);
+                    if (parsed.lastUpdate) parsed.lastUpdate = parseInt(parsed.lastUpdate);
+                    state = { ...state, ...parsed };
+                } catch (e) {
+                    console.error('Failed to parse saved state', e);
+                    localStorage.removeItem('supremeamerMiningState');
+                }
             }
         }
 
         function saveState() {
-            localStorage.setItem('supremeamerMiningState', JSON.stringify(state));
+            // Don't save charts to localStorage
+            const { charts, ...toSave } = state;
+            localStorage.setItem('supremeamerMiningState', JSON.stringify(toSave));
         }
 
         function updateUI() {
+            // Update mining stats
             elements.minedAmount.textContent = state.mined.toFixed(2);
-            elements.miningSpeed.textContent = `${state.upgraded ? config.upgradedSpeed : config.miningSpeed}/hr`;
+            elements.miningSpeed.textContent = `${config.miningTiers[state.tier].speed}/hr`;
+            elements.miningTier.textContent = config.miningTiers[state.tier].name;
             elements.referralCount.textContent = `${state.referrals}/${config.requiredReferrals}`;
             elements.totalReferrals.textContent = state.referrals;
             elements.referralEarnings.textContent = state.referralEarnings.toFixed(2);
             
             // Update mining button
             if (state.mining) {
-                elements.startMining.textContent = 'Stop Mining';
+                elements.startMining.innerHTML = '<i class="fas fa-stop"></i> Stop Mining';
                 elements.startMining.classList.remove('btn-success');
                 elements.startMining.classList.add('btn-danger');
             } else {
-                elements.startMining.textContent = 'Start Mining';
+                elements.startMining.innerHTML = '<i class="fas fa-play"></i> Start Mining';
                 elements.startMining.classList.add('btn-success');
                 elements.startMining.classList.remove('btn-danger');
             }
@@ -515,25 +1081,39 @@
             if (state.telegramUser) {
                 elements.telegramAuth.classList.add('hidden');
                 elements.userInfo.classList.remove('hidden');
+                elements.earningsCard.classList.remove('hidden');
                 elements.userName.textContent = `${state.telegramUser.first_name} ${state.telegramUser.last_name || ''}`;
                 elements.userId.textContent = state.telegramUser.id;
-                elements.userPhoto.src = state.telegramUser.photo_url || 'https://via.placeholder.com/50';
+                elements.userPhoto.src = state.telegramUser.photo_url || 'https://via.placeholder.com/150';
                 elements.joinDate.textContent = new Date(state.telegramUser.auth_date * 1000).toLocaleDateString();
+                elements.userTier.textContent = config.miningTiers[state.tier].name;
             }
             
             // Update wallet info
             if (state.walletConnected) {
-                elements.connectWallet.textContent = 'Connected';
+                elements.connectWallet.innerHTML = '<i class="fas fa-check-circle"></i> Connected';
                 elements.connectWallet.classList.add('btn-success');
                 elements.connectWallet.classList.remove('btn-primary');
                 elements.walletAddress.textContent = shortenAddress(state.walletAddress);
                 elements.walletAddress.classList.remove('hidden');
             }
+            
+            // Update upgrade button based on tier
+            if (state.tier === 'enterprise') {
+                elements.upgradeBtn.disabled = true;
+                elements.upgradeBtn.innerHTML = '<i class="fas fa-crown"></i> Max Tier';
+            } else {
+                elements.upgradeBtn.disabled = false;
+                elements.upgradeBtn.innerHTML = '<i class="fas fa-bolt"></i> Upgrade';
+            }
+            
+            // Update charts with fresh data
+            updateCharts();
         }
 
         function toggleMining() {
             if (!state.telegramUser) {
-                alert('Please register with Telegram first');
+                showNotification('Please register with Telegram first');
                 return;
             }
             
@@ -541,8 +1121,10 @@
             
             if (state.mining) {
                 startMining();
+                showNotification('Mining started successfully!');
             } else {
                 stopMining();
+                showNotification('Mining stopped');
             }
             
             saveState();
@@ -573,6 +1155,17 @@
         function updateMining() {
             calculateMined();
             updateUI();
+            
+            // Occasionally show mining notifications
+            if (Math.random() > 0.95) {
+                const messages = [
+                    "Mining SAT tokens...",
+                    "Blocks processed successfully!",
+                    "Hashrate stable at 250 KH/s",
+                    "Found new SAT tokens!"
+                ];
+                showNotification(messages[Math.floor(Math.random() * messages.length)]);
+            }
         }
 
         function calculateMined() {
@@ -580,7 +1173,7 @@
             
             const now = Date.now();
             const elapsedHours = (now - state.lastUpdate) / (1000 * 60 * 60);
-            const speed = state.upgraded ? config.upgradedSpeed : config.miningSpeed;
+            const speed = config.miningTiers[state.tier].speed;
             const minedThisInterval = elapsedHours * speed;
             
             state.mined += minedThisInterval;
@@ -589,95 +1182,145 @@
             saveState();
         }
 
-        function upgradeMining() {
+        function showUpgradeOptions() {
             if (!state.walletConnected) {
-                alert('Please connect your wallet first');
+                showNotification('Please connect your wallet first');
                 return;
             }
             
-            if (state.upgraded) {
-                alert('You already upgraded your mining speed');
-                return;
-            }
+            openModal(
+                'Upgrade Mining Tier',
+                `
+                <div class="tier-options">
+                    <div class="tier-card ${state.tier === 'basic' ? 'selected' : ''}" data-tier="basic">
+                        <div class="tier-name">Basic Tier</div>
+                        <div>Speed: <span class="tier-speed">0.08 SAT/hr</span></div>
+                        <div class="tier-price">Free</div>
+                        ${state.tier === 'basic' ? '<i class="fas fa-check"></i> Current' : ''}
+                    </div>
+                    
+                    <div class="tier-card ${state.tier === 'advanced' ? 'selected' : ''}" data-tier="advanced">
+                        <div class="tier-name">Advanced Tier</div>
+                        <div>Speed: <span class="tier-speed">0.12 SAT/hr</span></div>
+                        <div class="tier-price">$${config.miningTiers.advanced.price} in BNB</div>
+                        ${state.tier === 'advanced' ? '<i class="fas fa-check"></i> Current' : ''}
+                    </div>
+                    
+                    <div class="tier-card ${state.tier === 'pro' ? 'selected' : ''}" data-tier="pro">
+                        <div class="tier-name">Pro Tier</div>
+                        <div>Speed: <span class="tier-speed">0.20 SAT/hr</span></div>
+                        <div class="tier-price">$${config.miningTiers.pro.price} in BNB</div>
+                        ${state.tier === 'pro' ? '<i class="fas fa-check"></i> Current' : ''}
+                    </div>
+                    
+                    <div class="tier-card ${state.tier === 'enterprise' ? 'selected' : ''}" data-tier="enterprise">
+                        <div class="tier-name">Enterprise Tier</div>
+                        <div>Speed: <span class="tier-speed">0.35 SAT/hr</span></div>
+                        <div class="tier-price">$${config.miningTiers.enterprise.price} in BNB</div>
+                        ${state.tier === 'enterprise' ? '<i class="fas fa-check"></i> Current' : ''}
+                    </div>
+                </div>
+                `,
+                [
+                    { text: 'Cancel', class: 'btn-secondary', action: 'cancel' },
+                    { text: 'Upgrade', class: 'btn-primary', action: 'upgrade' }
+                ]
+            );
             
-            if (confirm(`Upgrade your mining speed to ${config.upgradedSpeed} SAT/hr for ${config.upgradeCost}$ worth of BNB?`)) {
-                // In a real app, you would send the transaction here
-                simulateUpgradeTransaction()
-                    .then(() => {
-                        state.upgraded = true;
-                        saveState();
-                        updateUI();
-                        alert('Mining speed upgraded successfully!');
-                    })
-                    .catch(err => {
-                        console.error('Upgrade failed:', err);
-                        alert('Upgrade failed. Please try again.');
+            // Add tier selection
+            document.querySelectorAll('.tier-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.tier-card').forEach(c => {
+                        c.classList.remove('selected');
                     });
+                    this.classList.add('selected');
+                });
+            });
+        }
+
+        function handleUpgrade(tier) {
+            if (tier === state.tier) {
+                showNotification('You already have this tier');
+                return;
+            }
+            
+            const tierInfo = config.miningTiers[tier];
+            
+            if (tierInfo.price > 0) {
+                showModal(
+                    'Confirm Upgrade',
+                    `
+                    <p>Upgrade to <strong>${tierInfo.name} Tier</strong> for <strong>${tierInfo.speed} SAT/hr</strong>?</p>
+                    <p>Cost: <strong>$${tierInfo.price} worth of BNB</strong></p>
+                    <p>This transaction will be sent to the blockchain.</p>
+                    `,
+                    [
+                        { text: 'Cancel', class: 'btn-secondary', action: 'cancel' },
+                        { text: 'Confirm & Pay', class: 'btn-primary', action: `confirmUpgrade:${tier}` }
+                    ]
+                );
+            } else {
+                // Free tier change
+                state.tier = tier;
+                saveState();
+                updateUI();
+                showNotification(`Switched to ${tierInfo.name} Tier`);
             }
         }
 
-        function simulateUpgradeTransaction() {
-            // This simulates a transaction - in a real app you would use Web3 to send BNB
-            return new Promise((resolve) => {
-                // Show loading state
-                elements.upgradeMining.disabled = true;
-                elements.upgradeMining.textContent = 'Processing...';
-                
-                // Simulate blockchain confirmation
-                setTimeout(() => {
-                    elements.upgradeMining.disabled = false;
-                    elements.upgradeMining.textContent = 'Upgrade Speed (2$ BNB)';
-                    resolve();
-                }, 3000);
-            });
+        function processUpgrade(tier) {
+            showNotification('Processing upgrade transaction...', 3000);
+            
+            // Simulate blockchain transaction
+            setTimeout(() => {
+                state.tier = tier;
+                saveState();
+                updateUI();
+                showNotification(`Upgraded to ${config.miningTiers[tier].name} Tier successfully!`);
+            }, 3000);
         }
 
         function withdrawFunds() {
             if (!state.walletConnected) {
-                alert('Please connect your wallet first');
+                showNotification('Please connect your wallet first');
                 return;
             }
             
             if (state.mined < config.minWithdraw) {
-                alert(`Minimum withdrawal is ${config.minWithdraw} SAT`);
+                showNotification(`Minimum withdrawal is ${config.minWithdraw} SAT`);
                 return;
             }
             
             if (state.referrals < config.requiredReferrals) {
-                alert(`You need at least ${config.requiredReferrals} referrals to withdraw`);
+                showNotification(`You need ${config.requiredReferrals} referrals to withdraw`);
                 return;
             }
             
-            if (confirm(`Withdraw ${state.mined.toFixed(2)} SAT to your wallet?`)) {
-                // In a real app, you would send the tokens here
-                simulateWithdrawalTransaction()
-                    .then(() => {
-                        alert(`Successfully withdrew ${state.mined.toFixed(2)} SAT!`);
-                        state.mined = 0;
-                        saveState();
-                        updateUI();
-                    })
-                    .catch(err => {
-                        console.error('Withdrawal failed:', err);
-                        alert('Withdrawal failed. Please try again.');
-                    });
-            }
+            openModal(
+                'Confirm Withdrawal',
+                `
+                <p>You are about to withdraw <strong>${state.mined.toFixed(2)} SAT</strong> to your wallet:</p>
+                <p class="wallet-address">${state.walletAddress}</p>
+                <p>Network fee: <strong>0.001 BNB</strong></p>
+                `,
+                [
+                    { text: 'Cancel', class: 'btn-secondary', action: 'cancel' },
+                    { text: 'Confirm Withdrawal', class: 'btn-primary', action: 'confirmWithdraw' }
+                ]
+            );
         }
 
-        function simulateWithdrawalTransaction() {
-            // This simulates a transaction - in a real app you would use Web3 to send tokens
-            return new Promise((resolve) => {
-                // Show loading state
-                elements.withdraw.disabled = true;
-                elements.withdraw.textContent = 'Processing...';
-                
-                // Simulate blockchain confirmation
-                setTimeout(() => {
-                    elements.withdraw.disabled = false;
-                    elements.withdraw.textContent = 'Withdraw (Min 10,000 SAT)';
-                    resolve();
-                }, 3000);
-            });
+        function processWithdrawal() {
+            showNotification('Processing withdrawal transaction...', 3000);
+            
+            // Simulate blockchain transaction
+            setTimeout(() => {
+                const withdrawn = state.mined;
+                state.mined = 0;
+                saveState();
+                updateUI();
+                showNotification(`Successfully withdrew ${withdrawn.toFixed(2)} SAT!`);
+            }, 3000);
         }
 
         function generateReferralLink() {
@@ -694,11 +1337,11 @@
                 // Register referral (in a real app, you would verify this server-side)
                 if (!localStorage.getItem(`ref_${refParam}`)) {
                     state.referrals += 1;
-                    state.referralEarnings += 100; // Example: 100 SAT per referral
+                    state.referralEarnings += 100; // Example bonus
                     localStorage.setItem(`ref_${refParam}`, 'registered');
                     saveState();
                     updateUI();
-                    alert('Referral registered!');
+                    showNotification('Referral registered! +100 SAT bonus');
                 }
             }
         }
@@ -706,7 +1349,7 @@
         function copyReferralLink() {
             elements.referralLink.select();
             document.execCommand('copy');
-            alert('Referral link copied to clipboard!');
+            showNotification('Referral link copied to clipboard!');
         }
 
         function onTelegramAuth(user) {
@@ -714,39 +1357,79 @@
             saveState();
             updateUI();
             generateReferralLink();
-            alert('Successfully registered with Telegram!');
+            showNotification('Successfully registered with Telegram!');
+            
+            // Simulate referral data
+            setTimeout(() => {
+                showBadge('homeBadge', '1');
+            }, 2000);
         }
 
         async function connectWallet() {
-            if (window.ethereum) {
-                try {
-                    // Request account access
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    state.walletAddress = accounts[0];
-                    state.walletConnected = true;
-                    
+            try {
+                if (!window.ethereum) {
+                    throw new Error('No Ethereum provider detected. Please install MetaMask.');
+                }
+                
+                // Show connecting state
+                elements.connectWallet.innerHTML = '<span class="spinner"></span> Connecting...';
+                
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                }).catch(err => {
+                    if (err.code === 4001) {
+                        throw new Error('Please connect your wallet to continue.');
+                    }
+                    throw err;
+                });
+                
+                state.walletAddress = accounts[0];
+                state.walletConnected = true;
+                
+                // Listen for account changes
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length === 0) {
+                        // Wallet disconnected
+                        state.walletConnected = false;
+                        state.walletAddress = null;
+                        showNotification('Wallet disconnected');
+                    } else {
+                        // Wallet changed
+                        state.walletAddress = accounts[0];
+                        showNotification('Wallet account changed');
+                    }
                     saveState();
                     updateUI();
-                    
-                    // Listen for account changes
-                    window.ethereum.on('accountsChanged', (accounts) => {
-                        if (accounts.length === 0) {
-                            // Wallet disconnected
-                            state.walletConnected = false;
-                            state.walletAddress = null;
-                        } else {
-                            // Wallet changed
-                            state.walletAddress = accounts[0];
-                        }
-                        saveState();
-                        updateUI();
-                    });
-                } catch (error) {
-                    console.error('Error connecting wallet:', error);
-                    alert('Failed to connect wallet');
-                }
-            } else {
-                alert('Please install MetaMask or another Ethereum wallet');
+                });
+                
+                // Listen for chain changes
+                window.ethereum.on('chainChanged', () => {
+                    window.location.reload();
+                });
+                
+                saveState();
+                updateUI();
+                showNotification('Wallet connected successfully!');
+                
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                elements.connectWallet.innerHTML = '<i class="fas fa-wallet"></i> Connect Wallet';
+                
+                openModal(
+                    'Wallet Connection Failed',
+                    `
+                    <p>${error.message}</p>
+                    ${!window.ethereum ? '<p>Would you like to install MetaMask?</p>' : ''}
+                    `,
+                    [
+                        { text: 'Cancel', class: 'btn-secondary', action: 'cancel' },
+                        ...(!window.ethereum ? [{ 
+                            text: 'Install MetaMask', 
+                            class: 'btn-primary', 
+                            action: 'installMetamask' 
+                        }] : [])
+                    ]
+                );
             }
         }
 
@@ -755,8 +1438,62 @@
             return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
         }
 
+        // Modal System Functions
+        function openModal(title, content, buttons = []) {
+            elements.modalTitle.textContent = title;
+            elements.modalBody.innerHTML = content;
+            
+            // Clear existing buttons
+            elements.modalFooter.innerHTML = '';
+            
+            // Add new buttons
+            buttons.forEach(btn => {
+                const button = document.createElement('button');
+                button.className = `btn ${btn.class}`;
+                button.textContent = btn.text;
+                if (btn.action) {
+                    button.dataset.action = btn.action;
+                }
+                elements.modalFooter.appendChild(button);
+            });
+            
+            elements.modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            elements.modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function handleModalAction(action) {
+            if (action === 'cancel') {
+                // Do nothing
+            } else if (action === 'installMetamask') {
+                window.open('https://metamask.io', '_blank');
+            } else if (action.startsWith('confirmUpgrade:')) {
+                const tier = action.split(':')[1];
+                processUpgrade(tier);
+            } else if (action === 'confirmWithdraw') {
+                processWithdrawal();
+            }
+        }
+
+        // Notification System
+        function showNotification(message, duration = 3000) {
+            elements.notification.textContent = message;
+            elements.notification.style.display = 'block';
+            
+            setTimeout(() => {
+                elements.notification.style.display = 'none';
+            }, duration);
+        }
+
         // Expose Telegram auth function to global scope
         window.onTelegramAuth = onTelegramAuth;
+        
+        // Expose modal system for debugging
+        window.showModal = openModal;
     </script>
 </body>
 </html>
