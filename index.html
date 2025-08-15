@@ -1,218 +1,762 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SupremeAmer Web3 Wallet</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@0xsequence/waas@1.2.0/dist/waas.js"></script>
-</head>
-<body class="bg-gray-100 text-gray-800">
-
-  <!-- Mnemonic Modal -->
-  <div id="mnemonic-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-sm">
-      <h3 class="text-lg font-bold mb-2">Import Wallet</h3>
-      <input type="text" id="mnemonic-input" class="w-full border px-3 py-2 rounded mb-2" placeholder="Enter mnemonic phrase"/>
-      <button id="import-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg w-full mb-2">Import</button>
-      <button onclick="closeMnemonicModal()" class="text-red-600 underline w-full">Cancel</button>
-    </div>
-  </div>
-
-  <div class="min-h-screen flex flex-col items-center justify-center p-4">
-    <div id="wallet-section" class="w-full max-w-md bg-white p-6 rounded-xl shadow-xl">
-      <h2 class="text-2xl font-bold mb-4 text-center">SupremeAmer Wallet</h2>
-      <div id="connect-wallet" class="flex flex-col gap-4">
-        <button id="create-wallet-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Create Wallet</button>
-        <button id="import-wallet-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg">Import Wallet</button>
-      </div>
-      <div id="main-dashboard" class="hidden">
-        <p class="text-center mb-4 font-semibold">Connected Address: <span id="wallet-address" class="break-all"></span></p>
-        <div class="mb-4">
-          <h3 class="text-lg font-semibold mb-2">Balances</h3>
-          <div id="balances" class="space-y-2">
-            <p>BNB: <span id="bnb-balance">Loading...</span></p>
-            <p>ETH: <span id="eth-balance">Loading...</span></p>
-            <p>SupremeAmer: <span id="supremeamer-balance">Loading...</span></p>
-          </div>
-        </div>
-        <div class="mb-4">
-          <h3 class="text-lg font-semibold mb-2">Send Tokens</h3>
-          <input type="text" id="send-to" placeholder="Recipient Address" class="w-full border px-3 py-2 rounded mb-2" />
-          <input type="number" id="send-amount" placeholder="Amount" class="w-full border px-3 py-2 rounded mb-2" min="0" step="any" />
-          <select id="token-type" class="w-full border px-3 py-2 rounded mb-2">
-            <option value="bnb">BNB</option>
-            <option value="eth">ETH</option>
-            <option value="supremeamer">SupremeAmer</option>
-          </select>
-          <button id="send-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg w-full">Send</button>
-        </div>
-        <div class="text-center">
-          <button onclick="disconnectWallet()" class="text-sm text-red-600 underline">Disconnect</button>
-        </div>
-      </div>
-      <div id="feedback" class="text-center text-sm mt-4 text-red-600"></div>
-    </div>
-  </div>
-  <script>
-    let provider, signer, walletAddress;
-    let supremeAmerContract;
-
-    // SupremeAmer token contract details (add missing ERC20 ABI)
-    const supremeAmerAddress = "0x06dB6BA51c18348A4C47465CAB643E62038969dd";
-    const supremeAmerABI = [
-      // ERC20 balanceOf
-      { "constant": true, "inputs": [{ "name": "owner", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "balance", "type": "uint256" }], "type": "function", "stateMutability": "view" },
-      // ERC20 transfer
-      { "constant": false, "inputs": [{ "name": "to", "type": "address" }, { "name": "value", "type": "uint256" }], "name": "transfer", "outputs": [{ "name": "", "type": "bool" }], "type": "function" },
-      // Owner & events (as in your original ABI)
-      {"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},
-      {"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},
-      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},
-      {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-      {"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},
-      {"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}
-    ];
-
-    // UI Elements
-    const feedback = document.getElementById("feedback");
-    const sendBtn = document.getElementById("send-btn");
-    const createWalletBtn = document.getElementById("create-wallet-btn");
-    const importWalletBtn = document.getElementById("import-wallet-btn");
-    const importBtn = document.getElementById("import-btn");
-
-    // Show/hide mnemonic modal
-    importWalletBtn.onclick = () => {
-      document.getElementById('mnemonic-modal').classList.remove('hidden');
-    };
-    function closeMnemonicModal() {
-      document.getElementById('mnemonic-modal').classList.add('hidden');
-      document.getElementById("mnemonic-input").value = '';
-      feedback.textContent = '';
-    }
-
-    // Create Wallet
-    createWalletBtn.onclick = async () => {
-      feedback.textContent = '';
-      try {
-        const wallet = ethers.Wallet.createRandom();
-        if (!window.ethereum) throw new Error("MetaMask or Web3 provider not found.");
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = wallet.connect(provider);
-        walletAddress = wallet.address;
-        setupUI(walletAddress);
-      } catch (err) {
-        feedback.textContent = `Error: ${err.message}`;
-      }
-    };
-
-    // Import Wallet
-    importBtn.onclick = async () => {
-      feedback.textContent = '';
-      const mnemonic = document.getElementById("mnemonic-input").value.trim();
-      if (!mnemonic) return feedback.textContent = "Please enter a mnemonic phrase.";
-      try {
-        const wallet = ethers.Wallet.fromPhrase(mnemonic);
-        if (!window.ethereum) throw new Error("MetaMask or Web3 provider not found.");
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = wallet.connect(provider);
-        walletAddress = wallet.address;
-        closeMnemonicModal();
-        setupUI(walletAddress);
-      } catch (err) {
-        feedback.textContent = `Error: ${err.message}`;
-      }
-    };
-
-    // Setup UI after connection
-    async function setupUI(address) {
-      document.getElementById("connect-wallet").classList.add("hidden");
-      document.getElementById("main-dashboard").classList.remove("hidden");
-      document.getElementById("wallet-address").textContent = address;
-      await updateBalances(address);
-    }
-
-    // Update token balances
-    async function updateBalances(address) {
-      feedback.textContent = '';
-      document.getElementById("bnb-balance").textContent = "Loading...";
-      document.getElementById("eth-balance").textContent = "Loading...";
-      document.getElementById("supremeamer-balance").textContent = "Loading...";
-      try {
-        // BNB (assume BSC mainnet)
-        const bnb = await provider.getBalance(address);
-        document.getElementById("bnb-balance").textContent = ethers.formatEther(bnb);
-
-        // ETH
-        const ethProvider = new ethers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_INFURA_ID");
-        const ethBalance = await ethProvider.getBalance(address);
-        document.getElementById("eth-balance").textContent = ethers.formatEther(ethBalance);
-
-        // SupremeAmer (ERC20)
-        supremeAmerContract = new ethers.Contract(supremeAmerAddress, supremeAmerABI, provider);
-        let tokenBalance = "0";
-        try {
-          tokenBalance = await supremeAmerContract.balanceOf(address);
-        } catch { /* skip */ }
-        document.getElementById("supremeamer-balance").textContent = ethers.formatUnits(tokenBalance, 18);
-      } catch (err) {
-        feedback.textContent = "Error fetching balances: " + err.message;
-      }
-    }
-
-    // Validate Ethereum address
-    function isValidAddress(addr) {
-      try { return ethers.isAddress(addr); }
-      catch { return false; }
-    }
-
-    // Send tokens
-    sendBtn.onclick = async () => {
-      feedback.textContent = '';
-      sendBtn.disabled = true;
-      sendBtn.textContent = "Sending...";
-      const to = document.getElementById("send-to").value.trim();
-      const amount = document.getElementById("send-amount").value.trim();
-      const token = document.getElementById("token-type").value;
-
-      if (!isValidAddress(to)) {
-        feedback.textContent = "Invalid recipient address.";
-        sendBtn.disabled = false; sendBtn.textContent = "Send";
-        return;
-      }
-      if (!amount || isNaN(amount) || Number(amount) <= 0) {
-        feedback.textContent = "Enter a valid amount.";
-        sendBtn.disabled = false; sendBtn.textContent = "Send";
-        return;
-      }
-
-      try {
-        let tx;
-        if (token === "bnb") {
-          tx = await signer.sendTransaction({ to, value: ethers.parseEther(amount) });
-        } else if (token === "eth") {
-          const ethProvider = new ethers.JsonRpcProvider("https://mainnet.infura.io/v3/YOUR_INFURA_ID");
-          const ethSigner = signer.connect(ethProvider);
-          tx = await ethSigner.sendTransaction({ to, value: ethers.parseEther(amount) });
-        } else {
-          supremeAmerContract = supremeAmerContract.connect(signer);
-          tx = await supremeAmerContract.transfer(to, ethers.parseUnits(amount, 18));
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupremeAmer Token Mining</title>
+    <style>
+        :root {
+            --primary: #4e54c8;
+            --secondary: #8f94fb;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --dark: #343a40;
+            --light: #f8f9fa;
         }
-        await tx.wait();
-        feedback.textContent = "Transaction sent!";
-        await updateBalances(walletAddress);
-      } catch (err) {
-        feedback.textContent = "Transaction failed: " + err.message;
-      }
-      sendBtn.disabled = false;
-      sendBtn.textContent = "Send";
-    };
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            padding-bottom: 80px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .tagline {
+            color: var(--secondary);
+            font-size: 1.1rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .mining-animation {
+            height: 120px;
+            margin: 20px auto;
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            background-color: #e9ecef;
+        }
+        
+        .mining-rig {
+            display: flex;
+            justify-content: space-around;
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+        }
+        
+        .miner {
+            width: 40px;
+            height: 40px;
+            background-color: var(--dark);
+            border-radius: 5px;
+            position: relative;
+            animation: mining 2s infinite ease-in-out;
+        }
+        
+        .miner:nth-child(2) { animation-delay: 0.3s; }
+        .miner:nth-child(3) { animation-delay: 0.6s; }
+        
+        @keyframes mining {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .satoshis-falling {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .satoshis-falling::before {
+            content: "SAT";
+            position: absolute;
+            top: -20px;
+            left: 10%;
+            animation: falling 3s linear infinite;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .satoshis-falling::after {
+            content: "SAT";
+            position: absolute;
+            top: -20px;
+            left: 30%;
+            animation: falling 3.5s linear infinite 1s;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        @keyframes falling {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--light);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .btn {
+            display: inline-block;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 1rem;
+            margin: 5px;
+        }
+        
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(to right, var(--success), #5cb85c);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(to right, var(--danger), #d9534f);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(to right, var(--warning), #f0ad4e);
+            color: black;
+        }
+        
+        .btn-info {
+            background: linear-gradient(to right, var(--info), #5bc0de);
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .input-group {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        
+        .form-control {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 50px 0 0 50px;
+            font-size: 1rem;
+        }
+        
+        .input-group-append .btn {
+            border-radius: 0 50px 50px 0;
+            margin-left: -1px;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px 0;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: space-around;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .footer-btn {
+            background: none;
+            border: none;
+            color: var(--dark);
+            font-size: 1.5rem;
+            padding: 5px 20px;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .footer-btn.active {
+            color: var(--primary);
+            transform: scale(1.1);
+        }
+        
+        .user-details {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .user-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            margin-right: 10px;
+        }
+        
+        .wallet-address {
+            font-family: monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .mt-3 { margin-top: 15px; }
+        .mb-3 { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="logo">SupremeAmer</h1>
+            <p class="tagline">Token Mining Platform</p>
+        </header>
 
-    // Disconnect
-    function disconnectWallet() {
-      location.reload();
-    }
-  </script>
+        <div class="wallet-connect card">
+            <div class="card-body">
+                <button id="connectWallet" class="btn btn-primary btn-block">Connect Wallet</button>
+                <div id="walletAddress" class="mt-3 wallet-address hidden"></div>
+            </div>
+        </div>
+
+        <div class="mining-card card">
+            <div class="card-body text-center">
+                <div class="mining-animation">
+                    <div class="mining-rig">
+                        <div class="miner"></div>
+                        <div class="miner"></div>
+                        <div class="miner"></div>
+                    </div>
+                    <div class="satoshis-falling"></div>
+                </div>
+                <h3>Mining SupremeAmer Tokens</h3>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Mined SAT</span>
+                        <span id="minedAmount" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Mining Speed</span>
+                        <span id="miningSpeed" class="stat-value">0.08/hr</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Referrals</span>
+                        <span id="referralCount" class="stat-value">0/3</span>
+                    </div>
+                </div>
+                
+                <button id="startMining" class="btn btn-success btn-block">Start Mining</button>
+                <button id="upgradeMining" class="btn btn-warning btn-block">Upgrade Speed (2$ BNB)</button>
+                <button id="withdraw" class="btn btn-info btn-block mt-3" disabled>Withdraw (Min 10,000 SAT)</button>
+            </div>
+        </div>
+
+        <div class="referral-section card">
+            <div class="card-body">
+                <h4>Referral Program</h4>
+                <p>Invite 3 friends to enable withdrawals</p>
+                <div class="input-group">
+                    <input type="text" id="referralLink" class="form-control" readonly>
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" id="copyReferral">Copy</button>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Referrals</span>
+                        <span id="totalReferrals" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Referral Earnings</span>
+                        <span id="referralEarnings" class="stat-value">0 SAT</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="telegram-auth card" id="telegramAuth">
+            <div class="card-body text-center">
+                <h4>Register with Telegram</h4>
+                <p>Connect your Telegram account to start mining</p>
+                <script async src="https://telegram.org/js/telegram-widget.js?19" 
+                        data-telegram-login="supremeamer_mining_bot" 
+                        data-size="large" 
+                        data-onauth="onTelegramAuth(user)" 
+                        data-request-access="write"></script>
+            </div>
+        </div>
+
+        <div class="user-info card hidden" id="userInfo">
+            <div class="card-body">
+                <h4>Welcome, <span id="userName"></span></h4>
+                <div class="user-details">
+                    <img id="userPhoto" src="" class="user-photo">
+                    <div>
+                        <div>Telegram ID: <span id="userId"></span></div>
+                        <div>Mining since: <span id="joinDate"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-nav">
+            <button class="footer-btn active" onclick="window.location.href='index.html'">
+                <i class="fas fa-home"></i> Home
+            </button>
+            <button class="footer-btn" onclick="window.location.href='dapp.html'">
+                <i class="fas fa-rocket"></i> DAPP
+            </button>
+            <button class="footer-btn" onclick="window.location.href='settings.html'">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // Configuration
+        const config = {
+            miningSpeed: 0.08, // SAT per hour
+            upgradedSpeed: 0.12, // SAT per hour
+            upgradeCost: 2, // in USD worth of BNB
+            minWithdraw: 10000, // minimum SAT to withdraw
+            requiredReferrals: 3, // required referrals to withdraw
+            upgradeWallet: "0xYourWalletAddress", // Your wallet address for upgrade fees
+            contractAddress: "0xSupremeAmerContract", // SupremeAmer token contract
+            bnbRpcUrl: "https://bsc-dataseed.binance.org/", // BSC RPC URL
+            telegramBotName: "@Suprememer_bot" // Your Telegram bot username
+        };
+
+        // State
+        let state = {
+            mined: 0,
+            mining: false,
+            upgraded: false,
+            referrals: 0,
+            referralEarnings: 0,
+            startTime: null,
+            lastUpdate: null,
+            walletConnected: false,
+            walletAddress: null,
+            telegramUser: null,
+            miningInterval: null
+        };
+
+        // DOM Elements
+        const elements = {
+            minedAmount: document.getElementById('minedAmount'),
+            miningSpeed: document.getElementById('miningSpeed'),
+            referralCount: document.getElementById('referralCount'),
+            startMining: document.getElementById('startMining'),
+            upgradeMining: document.getElementById('upgradeMining'),
+            withdraw: document.getElementById('withdraw'),
+            referralLink: document.getElementById('referralLink'),
+            copyReferral: document.getElementById('copyReferral'),
+            totalReferrals: document.getElementById('totalReferrals'),
+            referralEarnings: document.getElementById('referralEarnings'),
+            telegramAuth: document.getElementById('telegramAuth'),
+            userInfo: document.getElementById('userInfo'),
+            userName: document.getElementById('userName'),
+            userId: document.getElementById('userId'),
+            userPhoto: document.getElementById('userPhoto'),
+            joinDate: document.getElementById('joinDate'),
+            connectWallet: document.getElementById('connectWallet'),
+            walletAddress: document.getElementById('walletAddress')
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadState();
+            setupEventListeners();
+            updateUI();
+            generateReferralLink();
+            
+            // Check if mining was active when page was closed
+            if (state.mining) {
+                startMining();
+            }
+            
+            // Check for referral in URL
+            checkReferral();
+        });
+
+        function setupEventListeners() {
+            elements.startMining.addEventListener('click', toggleMining);
+            elements.upgradeMining.addEventListener('click', upgradeMining);
+            elements.withdraw.addEventListener('click', withdrawFunds);
+            elements.copyReferral.addEventListener('click', copyReferralLink);
+            elements.connectWallet.addEventListener('click', connectWallet);
+        }
+
+        function loadState() {
+            const savedState = localStorage.getItem('supremeamerMiningState');
+            if (savedState) {
+                state = JSON.parse(savedState);
+                // Convert string dates back to numbers
+                if (state.startTime) state.startTime = parseInt(state.startTime);
+                if (state.lastUpdate) state.lastUpdate = parseInt(state.lastUpdate);
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('supremeamerMiningState', JSON.stringify(state));
+        }
+
+        function updateUI() {
+            elements.minedAmount.textContent = state.mined.toFixed(2);
+            elements.miningSpeed.textContent = `${state.upgraded ? config.upgradedSpeed : config.miningSpeed}/hr`;
+            elements.referralCount.textContent = `${state.referrals}/${config.requiredReferrals}`;
+            elements.totalReferrals.textContent = state.referrals;
+            elements.referralEarnings.textContent = state.referralEarnings.toFixed(2);
+            
+            // Update mining button
+            if (state.mining) {
+                elements.startMining.textContent = 'Stop Mining';
+                elements.startMining.classList.remove('btn-success');
+                elements.startMining.classList.add('btn-danger');
+            } else {
+                elements.startMining.textContent = 'Start Mining';
+                elements.startMining.classList.add('btn-success');
+                elements.startMining.classList.remove('btn-danger');
+            }
+            
+            // Update withdraw button
+            elements.withdraw.disabled = !(state.mined >= config.minWithdraw && 
+                                         state.referrals >= config.requiredReferrals && 
+                                         state.walletConnected);
+            
+            // Update user info if logged in
+            if (state.telegramUser) {
+                elements.telegramAuth.classList.add('hidden');
+                elements.userInfo.classList.remove('hidden');
+                elements.userName.textContent = `${state.telegramUser.first_name} ${state.telegramUser.last_name || ''}`;
+                elements.userId.textContent = state.telegramUser.id;
+                elements.userPhoto.src = state.telegramUser.photo_url || 'https://via.placeholder.com/50';
+                elements.joinDate.textContent = new Date(state.telegramUser.auth_date * 1000).toLocaleDateString();
+            }
+            
+            // Update wallet info
+            if (state.walletConnected) {
+                elements.connectWallet.textContent = 'Connected';
+                elements.connectWallet.classList.add('btn-success');
+                elements.connectWallet.classList.remove('btn-primary');
+                elements.walletAddress.textContent = shortenAddress(state.walletAddress);
+                elements.walletAddress.classList.remove('hidden');
+            }
+        }
+
+        function toggleMining() {
+            if (!state.telegramUser) {
+                alert('Please register with Telegram first');
+                return;
+            }
+            
+            state.mining = !state.mining;
+            
+            if (state.mining) {
+                startMining();
+            } else {
+                stopMining();
+            }
+            
+            saveState();
+            updateUI();
+        }
+
+        function startMining() {
+            if (!state.startTime) {
+                state.startTime = Date.now();
+            }
+            state.lastUpdate = Date.now();
+            state.mining = true;
+            
+            // Start mining interval
+            if (state.miningInterval) {
+                clearInterval(state.miningInterval);
+            }
+            
+            state.miningInterval = setInterval(updateMining, 1000);
+        }
+
+        function stopMining() {
+            state.mining = false;
+            clearInterval(state.miningInterval);
+            calculateMined();
+        }
+
+        function updateMining() {
+            calculateMined();
+            updateUI();
+        }
+
+        function calculateMined() {
+            if (!state.mining || !state.lastUpdate) return;
+            
+            const now = Date.now();
+            const elapsedHours = (now - state.lastUpdate) / (1000 * 60 * 60);
+            const speed = state.upgraded ? config.upgradedSpeed : config.miningSpeed;
+            const minedThisInterval = elapsedHours * speed;
+            
+            state.mined += minedThisInterval;
+            state.lastUpdate = now;
+            
+            saveState();
+        }
+
+        function upgradeMining() {
+            if (!state.walletConnected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+            
+            if (state.upgraded) {
+                alert('You already upgraded your mining speed');
+                return;
+            }
+            
+            if (confirm(`Upgrade your mining speed to ${config.upgradedSpeed} SAT/hr for ${config.upgradeCost}$ worth of BNB?`)) {
+                // In a real app, you would send the transaction here
+                simulateUpgradeTransaction()
+                    .then(() => {
+                        state.upgraded = true;
+                        saveState();
+                        updateUI();
+                        alert('Mining speed upgraded successfully!');
+                    })
+                    .catch(err => {
+                        console.error('Upgrade failed:', err);
+                        alert('Upgrade failed. Please try again.');
+                    });
+            }
+        }
+
+        function simulateUpgradeTransaction() {
+            // This simulates a transaction - in a real app you would use Web3 to send BNB
+            return new Promise((resolve) => {
+                // Show loading state
+                elements.upgradeMining.disabled = true;
+                elements.upgradeMining.textContent = 'Processing...';
+                
+                // Simulate blockchain confirmation
+                setTimeout(() => {
+                    elements.upgradeMining.disabled = false;
+                    elements.upgradeMining.textContent = 'Upgrade Speed (2$ BNB)';
+                    resolve();
+                }, 3000);
+            });
+        }
+
+        function withdrawFunds() {
+            if (!state.walletConnected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+            
+            if (state.mined < config.minWithdraw) {
+                alert(`Minimum withdrawal is ${config.minWithdraw} SAT`);
+                return;
+            }
+            
+            if (state.referrals < config.requiredReferrals) {
+                alert(`You need at least ${config.requiredReferrals} referrals to withdraw`);
+                return;
+            }
+            
+            if (confirm(`Withdraw ${state.mined.toFixed(2)} SAT to your wallet?`)) {
+                // In a real app, you would send the tokens here
+                simulateWithdrawalTransaction()
+                    .then(() => {
+                        alert(`Successfully withdrew ${state.mined.toFixed(2)} SAT!`);
+                        state.mined = 0;
+                        saveState();
+                        updateUI();
+                    })
+                    .catch(err => {
+                        console.error('Withdrawal failed:', err);
+                        alert('Withdrawal failed. Please try again.');
+                    });
+            }
+        }
+
+        function simulateWithdrawalTransaction() {
+            // This simulates a transaction - in a real app you would use Web3 to send tokens
+            return new Promise((resolve) => {
+                // Show loading state
+                elements.withdraw.disabled = true;
+                elements.withdraw.textContent = 'Processing...';
+                
+                // Simulate blockchain confirmation
+                setTimeout(() => {
+                    elements.withdraw.disabled = false;
+                    elements.withdraw.textContent = 'Withdraw (Min 10,000 SAT)';
+                    resolve();
+                }, 3000);
+            });
+        }
+
+        function generateReferralLink() {
+            const baseUrl = window.location.href.split('?')[0];
+            const refId = state.telegramUser ? state.telegramUser.id : 'ref';
+            elements.referralLink.value = `${baseUrl}?ref=${refId}`;
+        }
+
+        function checkReferral() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refParam = urlParams.get('ref');
+            
+            if (refParam && refParam !== (state.telegramUser?.id || '')) {
+                // Register referral (in a real app, you would verify this server-side)
+                if (!localStorage.getItem(`ref_${refParam}`)) {
+                    state.referrals += 1;
+                    state.referralEarnings += 100; // Example: 100 SAT per referral
+                    localStorage.setItem(`ref_${refParam}`, 'registered');
+                    saveState();
+                    updateUI();
+                    alert('Referral registered!');
+                }
+            }
+        }
+
+        function copyReferralLink() {
+            elements.referralLink.select();
+            document.execCommand('copy');
+            alert('Referral link copied to clipboard!');
+        }
+
+        function onTelegramAuth(user) {
+            state.telegramUser = user;
+            saveState();
+            updateUI();
+            generateReferralLink();
+            alert('Successfully registered with Telegram!');
+        }
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                try {
+                    // Request account access
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    state.walletAddress = accounts[0];
+                    state.walletConnected = true;
+                    
+                    saveState();
+                    updateUI();
+                    
+                    // Listen for account changes
+                    window.ethereum.on('accountsChanged', (accounts) => {
+                        if (accounts.length === 0) {
+                            // Wallet disconnected
+                            state.walletConnected = false;
+                            state.walletAddress = null;
+                        } else {
+                            // Wallet changed
+                            state.walletAddress = accounts[0];
+                        }
+                        saveState();
+                        updateUI();
+                    });
+                } catch (error) {
+                    console.error('Error connecting wallet:', error);
+                    alert('Failed to connect wallet');
+                }
+            } else {
+                alert('Please install MetaMask or another Ethereum wallet');
+            }
+        }
+
+        function shortenAddress(address) {
+            if (!address) return '';
+            return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+        }
+
+        // Expose Telegram auth function to global scope
+        window.onTelegramAuth = onTelegramAuth;
+    </script>
 </body>
 </html>
