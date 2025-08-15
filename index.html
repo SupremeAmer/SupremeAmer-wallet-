@@ -6,7 +6,7 @@
     <title>SupremeAmer Token Mining</title>
     <!-- Wallet Connection Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.4.0/dist/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <!-- UI Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -153,6 +153,39 @@
             width: 28px;
             height: 28px;
             object-fit: contain;
+        }
+        
+        /* WalletConnect QR Modal */
+        .wallet-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .wallet-modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .wallet-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
         }
         
         /* Stats Cards */
@@ -414,14 +447,24 @@
         </div>
     </footer>
 
+    <!-- WalletConnect QR Modal -->
+    <div id="walletConnectModal" class="wallet-modal" style="display: none;">
+        <div class="wallet-modal-content">
+            <button class="wallet-modal-close" onclick="closeModal()">&times;</button>
+            <h4>Scan with WalletConnect</h4>
+            <div id="walletConnectQr" class="my-4"></div>
+            <p>Or open in your mobile wallet</p>
+            <button class="btn-custom btn-primary" id="wcDeepLink">Open Wallet</button>
+        </div>
+    </div>
+
     <script>
         // Configuration - Replace with your actual contract details
         const CONFIG = {
             CONTRACT_ADDRESS: "0xdb6424cb49b00f5574ea8a581df85e9d1a3939eefe029e7aa2f7fecdb2b82479",
-            CONTRACT_Abi:  {"chainId":"0x38","abi":[{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}],"contractName":"Ownable","contractAddress":"0xdb6424cb49b00f5574ea8a581df85e9d1a3939eefe029e7aa2f7fecdb2b82479"},
-            BSC_RPC_URL: "https://bsc-mainnet.infura.io/v3/d51a2c96b18044878b5f6336495bf341",
-            WALLETCONNECT_BRIDGE: "https://bridge.walletconnect.org",
-            TELEGRAM_BOT: "@Suprememer_bot",
+            CONTRACT_ABI:{"chainId":"0x38","abi":[{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}],"contractName":"Ownable","contractAddress":"0xdb6424cb49b00f5574ea8a581df85e9d1a3939eefe029e7aa2f7fecdb2b82479"},  BSC_RPC_URL: "https://bsc-testnet.infura.io/v3/d51a2c96b18044878b5f6336495bf341",
+            WALLETCONNECT_PROJECT_ID: "YOUR_WALLETCONNECT_PROJECT_ID",
+            TELEGRAM_BOT: "YourBotName",
             MINING_TIERS: {
                 basic: { speed: 0.08, price: 0 },
                 advanced: { speed: 0.12, price: 2 },
@@ -443,7 +486,8 @@
             referrals: 0,
             isMining: false,
             user: null,
-            chart: null
+            chart: null,
+            walletConnectProvider: null
         };
 
         // DOM Elements
@@ -460,7 +504,10 @@
             claimBtn: document.getElementById('claimBtn'),
             upgradeBtn: document.getElementById('upgradeBtn'),
             miningAnimation: document.getElementById('miningAnimation'),
-            earningsChart: document.getElementById('earningsChart')
+            earningsChart: document.getElementById('earningsChart'),
+            walletConnectModal: document.getElementById('walletConnectModal'),
+            walletConnectQr: document.getElementById('walletConnectQr'),
+            wcDeepLink: document.getElementById('wcDeepLink')
         };
 
         // Initialize the application
@@ -512,13 +559,20 @@
                         break;
                         
                     case 'walletconnect':
-                        provider = new WalletConnectProvider.default({
-                            rpc: {
-                                56: CONFIG.BSC_RPC_URL
-                            },
-                            bridge: CONFIG.WALLETCONNECT_BRIDGE
+                        // Initialize WalletConnect v2
+                        state.walletConnectProvider = await EthereumProvider.init({
+                            projectId: CONFIG.WALLETCONNECT_PROJECT_ID,
+                            chains: [56], // BSC chain ID
+                            showQrModal: false // We'll handle the QR display ourselves
                         });
-                        await provider.enable();
+                        
+                        // Set up QR code display
+                        state.walletConnectProvider.on('display_uri', (uri) => {
+                            showWalletConnectModal(uri);
+                        });
+                        
+                        await state.walletConnectProvider.connect();
+                        provider = state.walletConnectProvider;
                         break;
                         
                     case 'trust':
@@ -570,7 +624,7 @@
                 
             } catch (error) {
                 console.error('Wallet connection failed:', error);
-                alert(`Connection failed: ${error.message}`);
+                showError(`Connection failed: ${error.message}`);
             } finally {
                 document.querySelectorAll('.wallet-btn').forEach(btn => {
                     btn.innerHTML = btn.innerHTML.replace('<span class="spinner-border spinner-border-sm" role="status"></span> ', '');
@@ -578,10 +632,36 @@
             }
         }
 
+        function showWalletConnectModal(uri) {
+            // Generate QR code
+            new QRCode(elements.walletConnectQr, {
+                text: uri,
+                width: 250,
+                height: 250,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Set up deep link
+            elements.wcDeepLink.onclick = () => {
+                window.location.href = uri;
+            };
+            
+            // Show modal
+            elements.walletConnectModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            elements.walletConnectModal.style.display = 'none';
+            // Clear QR code
+            elements.walletConnectQr.innerHTML = '';
+        }
+
         function handleAccountsChanged(accounts) {
             if (accounts.length === 0) {
                 // Wallet disconnected
-                alert('Wallet disconnected');
+                showError('Wallet disconnected');
                 resetApp();
             } else {
                 // Account changed
@@ -783,8 +863,15 @@
             alert(message);
         }
 
-        // Expose wallet connection for testing
-        window.connectWallet = connectWallet;
+        // Error handling
+        function showError(message) {
+            // This would show a nice error modal
+            console.error(message);
+            alert(message);
+        }
+
+        // QR Code Library (for WalletConnect)
+        document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"><\/script>');
     </script>
 </body>
 </html>
