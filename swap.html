@@ -461,9 +461,8 @@
     <script>
         // Configuration - Replace with your actual contract details
         const CONFIG = {
-            CONTRACT_ADDRESS: "0xYourContractAddress",
-            CONTRACT_ABI: [/* Your Contract ABI */],
-            BSC_RPC_URL: "https://bsc-testnet.infura.io/v3/d51a2c96b18044878b5f6336495bf341",
+            CONTRACT_ADDRESS: "0xdb6424cb49b00f5574ea8a581df85e9d1a3939eefe029e7aa2f7fecdb2b82479",
+            CONTRACT_ABI:{"chainId":"0x38","abi":[{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"OwnableInvalidOwner","type":"error"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"OwnableUnauthorizedAccount","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}],"contractName":"Ownable","contractAddress":"0xdb6424cb49b00f5574ea8a581df85e9d1a3939eefe029e7aa2f7fecdb2b82479"},  BSC_RPC_URL: "https://bsc-testnet.infura.io/v3/d51a2c96b18044878b5f6336495bf341",
             WALLETCONNECT_PROJECT_ID: "YOUR_WALLETCONNECT_PROJECT_ID",
             TELEGRAM_BOT: "YourBotName",
             MINING_TIERS: {
